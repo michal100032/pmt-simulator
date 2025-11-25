@@ -15,19 +15,19 @@ And then, to upload:
 arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:esp32 .
 ```
 ## Hardware Overview
-ESP32
-AD5361BSTZ 16-bit DAC, 16-channel,
-Custom PMT - simulator PCB
+- ESP32
+- AD5361BSTZ 16-bit DAC, 16-channel,
+- Custom PMT - simulator PCB
 
 ## Electrical Behavior
 The DAC sets an analog voltage representing PMT pulse amplitude. After settings, both transistor gates are activated, generating the final shaped pulse. This output takes the form of a PMT anode current pulse, thereby providing a perfect test case for developing the acquisition system.
 
 ## Pulse Generation Sequence
-Disable both transistor gates 
-Set DAC channel voltage (highVoltage / lowVoltage)
-Settle delay on DAC IO
-Enable transistor gates for pulseWidth_us
-Return to idle state 
+1. Disable both transistor gates 
+2. Set DAC channel voltage (highVoltage / lowVoltage)
+3. Settle delay on DAC IO
+4. Enable transistor gates for pulseWidth_us
+5. Return to idle state 
 
 ## Pin Mapping
 
@@ -43,6 +43,6 @@ Return to idle state
 | 5         | DAC CS            |
 
 ## Future Extensions
-FPGA trigger synchronization
-Configurable rise/fall shaping
-Multichannel DAC control 
+- FPGA trigger synchronization
+- Configurable rise/fall shaping
+- Multichannel DAC control 
