@@ -1,45 +1,33 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include "AD536x.h"
+#include "soc/gpio_struct.h"
+#include "driver/gpio.h"
 
 namespace CONFIG {
   constexpr int SPI_SCK_PIN  = 18;
   constexpr int SPI_MOSI_PIN = 23;
   constexpr int SPI_MISO_PIN = 19;
+
   constexpr int CS_PIN       = 5;
   constexpr int LDAC_PIN     = 26;
   constexpr int RESET_PIN    = 14;
+
   constexpr int GATE1_PIN    = 27;
   constexpr int GATE2_PIN    = 25;
 
-  constexpr float VREF       = 10.0f;
-  constexpr int DAC_BITS     = 14;
-  constexpr int DAC_MAX      = (1 << DAC_BITS) - 1;
-
-  constexpr AD536x_bank_t BANK = BANK0;
-  constexpr AD536x_ch_t   CH   = CH0;
+  constexpr float VREF = 10.0f;
 
   volatile uint32_t pulseWidth_us  = 100;
   volatile uint32_t pulsePeriod_us = 1000;
+
   volatile float highVoltage = 8.0f;
   volatile float lowVoltage  = 0.0f;
 }
 
 using namespace CONFIG;
 
-SPIClass spi(HSPI);
-AD536x dac(spi, CS_PIN, LDAC_PIN, RESET_PIN);
-
-static inline uint16_t voltageToCode(float v) {
-  if (v <= 0.0f) return 0;
-  if (v >= VREF) return DAC_MAX;
-  return static_cast<uint16_t>((v / VREF) * DAC_MAX + 0.5f);
-}
-
-static inline void dacWrite(float voltage) {
-  dac.setValue(BANK, CH, voltageToCode(voltage));
-  dac.IOUpdate();
-}
+AD536x dac(CS_PIN, RESET_PIN, LDAC_PIN, RESET_PIN);
 
 static inline void gatesOff() {
   GPIO.out_w1tc = (1UL << GATE1_PIN) | (1UL << GATE2_PIN);
@@ -55,8 +43,12 @@ static inline void gate2On() {
 
 static void generatePulse(float voltage, uint32_t width_us) {
   gatesOff();
-  dacWrite(voltage);
+
+  dac.setVoltageHold(BANK0, CH0, voltage);
+  dac.IOUpdate();
+
   delayMicroseconds(2);
+
   gate1On();
   delayMicroseconds(width_us);
   gate2On();
@@ -66,17 +58,27 @@ void setup() {
   Serial.begin(115200);
   while (!Serial) {}
 
+  pinMode(CS_PIN, OUTPUT);
+  pinMode(LDAC_PIN, OUTPUT);
+  pinMode(RESET_PIN, OUTPUT);
+
   pinMode(GATE1_PIN, OUTPUT);
   pinMode(GATE2_PIN, OUTPUT);
+
+  digitalWrite(CS_PIN, HIGH);
+  digitalWrite(LDAC_PIN, HIGH);
+  digitalWrite(RESET_PIN, HIGH);
+
   gatesOff();
 
-  spi.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, CS_PIN);
+  SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, CS_PIN);
+  SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE1));
 
-  dac.reset();
   dac.setGlobalVref(BANKALL, VREF);
-  dacWrite(lowVoltage);
+  dac.setVoltageHold(BANK0, CH0, lowVoltage);
+  dac.IOUpdate();
 
-  Serial.println("PMT Simulator ready");
+  Serial.println("PMT Simulator ready – ESP32 + AD5361");
 }
 
 void loop() {
@@ -84,4 +86,5 @@ void loop() {
   generatePulse(highVoltage, pulseWidth_us);
   while ((micros() - t0) < pulsePeriod_us) {}
 }
+
 
