@@ -45,4 +45,22 @@ Achieve well-shaped pulses with controlled amplitude, width, and clock synchroni
 - Verified pulse consistency and reproducibility across multiple test cycles
 - Conducted debugging and fine-tuning of pulse edges to reduce overshoot and timing errors
 
+## Week 6:
+## Objective:
+System validation, robustness testing,
+## Task:
+- Verified repeatability of pulse amplitude and width under continuous operation
+- Evalueted system behavior under different SPI clock speeds and load conditions
+- Established baseline performance metrics for future FPGA-based implementation
 
+
+## Measurements & Validation:
+* Verified DAC settling behavior prior to gate activation using oscilloscope
+* Measured pulse-to-pulse timing variation and confirmed sub-microsecond stability
+* Documented observed rise/fall times and their dependency on gate timing
+
+## Design Decisions & Rationale:
+* Chose ESP32 as a flexible prototyping controller before FPGA migration
+* Separated amplitude generation (DAC) from pulse shaping
+* Used softare-controlled timing to enable rapid iteration and parameter tuning
+* Designed firmware structure to be easily portable to FPGA or bare-metal systems
