@@ -1,7 +1,6 @@
 # PMT Simulator Board Verification
 
-Platform: ESP32  
-Status: Verified  
+Platform: ESP32    
 Interface: Python GUI  
 
 This repository contains the firmware and control interface for the Photomultiplier Tube (PMT) Simulator Board. This system is a custom electronics module designed to mimic the behavior of a real photomultiplier detector, used for testing, calibration, and FPGA acquisition system development.
@@ -17,10 +16,14 @@ The board utilizes a high-resolution Analog Devices AD5361 (14-bit DAC) combined
 ### 1. Firmware (ESP32)
 
 **Compile:**  
-`arduino-cli compile --fqbn esp32:esp32:esp32 .`
+```bash
+arduino-cli compile --fqbn esp32:esp32:esp32 .
+```
 
-**Upload:**  
-`arduino-cli upload -p /dev/cu.usbserial-0001 --fqbn esp32:esp32:esp32 .`
+**Upload:** 
+```bash 
+arduino-cli upload -p /dev/cu.usbserial-0001 --fqbn esp32:esp32:esp32 .
+```
 
 ---
 
@@ -28,24 +31,28 @@ The board utilizes a high-resolution Analog Devices AD5361 (14-bit DAC) combined
 
 Ensure you have Python 3.9+ installed.
 
-**Install dependencies:**  
-`pip install pyserial customtkinter`
+**Install dependencies:** 
+```bash 
+pip install pyserial customtkinter
+```
 
 **Run the controller:**  
-`python3 ControlPanel.py`
+```bash
+python3 ControlPanel.py
+```
 
 ---
 
 ## Pin Mapping (ESP32)
 
-| ESP32 Pin | Function | Description |
-|---------:|----------|-------------|
-| 18 | SPI SCK | Serial Clock |
-| 23 | SPI MOSI | Master Out Slave In |
+| ESP32 Pin | Function | Description|
+|----------|----------|------------------------|
+| 18 | SPI SCK  | Serial Clock                 |
+| 23 | SPI MOSI | Master Out Slave In          |
 | 15 | SPI MISO | Master In Slave Out (Unused) |
-| 5  | DAC CS | Chip Select (Active Low) |
-| 27 | Gate Trigger 1 | PMT Pulse Output 1 |
-| 25 | Gate Trigger 2 | PMT Pulse Output 2 |
+| 5  | DAC CS   | Chip Select (Active Low)     |
+| 27 | Gate Trigger 1 | PMT Pulse Output 1     |
+| 25 | Gate Trigger 2 | PMT Pulse Output 2     |
 
 ---
 
