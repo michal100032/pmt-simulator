@@ -1,48 +1,94 @@
-# Photomultiplier tube simulator board verification
+# PMT Simulator Board Verification
 
-This repository contains firmware for the Photomultiplier Tube (PMT) Simulator Board, a custom electronics module designed to mimic the behavior of a real photomultiplier detector. The board uses a high-resolution Analog Devices AD5361BSTZ DAC together with two high-speed transistor stages that, when properly driven, generate output pulses closely resembling signals from a real PMT.
-The ESP32 acts as a controller that sets DAC output voltage levels and precisely times gate transistor switching, allowing reproducible PMT-like pulse generation for testing, calibration, and FPGA firmware development.
-This code is primarily intended to validate electrical behavior of the custom PMT simulator board before it is eventually driven by an FPGA system.
+Platform: ESP32
+Status: Verified
+Interface: Python GUI
 
-## Building and running
+This repository contains the firmware and control interface for the Photomultiplier Tube (PMT) Simulator Board. This system is a custom electronics module designed to mimic the behavior of a real photomultiplier detector, used for testing, calibration, and FPGA acquisition system development.
 
-The project can be built with Arduino IDE or Arduino CLI. To build with Arduino CLI, run:
-```sh
+## Project Description
+
+The board utilizes a high-resolution Analog Devices AD5361 (14-bit DAC) combined with high-speed transistor stages. The ESP32 acts as the primary controller, managing DAC voltage levels and precise gate switching to generate reproducible PMT-like pulses. This system is essential for validating the electrical behavior of the simulator board before integration with FPGA-based systems.
+
+---
+
+## Building and Running
+
+### 1. Firmware (ESP32)
+The project can be built using the Arduino IDE or CLI.
+
+**Compile:**
 arduino-cli compile --fqbn esp32:esp32:esp32 .
-```
-And then, to upload:
-```sh
-arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:esp32 .
-```
-## Hardware Overview
-- ESP32
-- AD5361BSTZ 16-bit DAC, 16-channel,
-- Custom PMT - simulator PCB
 
-## Electrical Behavior
-The DAC sets an analog voltage representing PMT pulse amplitude. After settings, both transistor gates are activated, generating the final shaped pulse. This output takes the form of a PMT anode current pulse, thereby providing a perfect test case for developing the acquisition system.
+**Upload:**
+arduino-cli upload -p /dev/cu.usbserial-0001 --fqbn esp32:esp32:esp32 .
 
-## Pulse Generation Sequence
-1. Disable both transistor gates 
-2. Set DAC channel voltage (highVoltage / lowVoltage)
-3. Settle delay on DAC IO
-4. Enable transistor gates for pulseWidth_us
-5. Return to idle state 
+### 2. Control Interface (Python)
+Ensure you have Python 3.9+ installed.
 
-## Pin Mapping
+**Install dependencies:**
+pip install pyserial customtkinter
 
-| ESP32 Pin | Function          |
-|-----------|-------------------|
-| 18        | SPI SCK           |
-| 23        | SPI MOSI          |
-| 19        | SPI MISO          |
-| 27        | Gate Transistor 1 |
-| 25        | Gate Transistor 2 |
-| 14        | DAC RESET         |
-| 26        | DAC LDAC          |
-| 5         | DAC CS            |
+**Run the controller:**
+python3 ControlPanel.py
+
+---
+
+## Pin Mapping (ESP32)
+
+Based on the latest firmware configuration:
+
+| ESP32 Pin | Function | Description |
+| :--- | :--- | :--- |
+| 18 | SPI SCK | Serial Clock |
+| 23 | SPI MOSI | Master Out Slave In |
+| 15 | SPI MISO | Master In Slave Out (Unused) |
+| 5 | DAC CS | Chip Select (Active Low) |
+| 27 | Gate Trigger 1 | PMT Pulse Output 1 |
+| 25 | Gate Trigger 2 | PMT Pulse Output 2 |
+
+---
+
+## Communication Protocol
+
+The PC sends parameters over Serial (115200 Baud) in a comma-separated format.
+
+**Command Format:** V1,V2,DELAY_US,PERIOD_MS\n
+
+* V1, V2: Amplitude voltages (0.0 - 10.0V).
+* DELAY_US: Time offset between the two hits (microseconds).
+* PERIOD_MS: Cycle repetition time (milliseconds). Set to 0 for single-shot mode.
+
+---
+
+## Pulse Generation Logic
+
+The firmware utilizes a non-blocking state machine (using millis()) to ensure the device remains responsive to new commands while generating high-speed pulses.
+
+
+
+1. Command Parsing: ESP32 listens for the \n terminator and decodes the CSV string.
+2. DAC Update: Voltage values are converted to 14-bit codes and sent via SPI.
+3. Triggering Sequence:
+   - Set Trigger 1 (Pin 27) HIGH.
+   - Wait for the specified DELAY_US.
+   - Set Trigger 2 (Pin 25) HIGH.
+   - Maintain HIGH state for PMT_PULSE_WIDTH_US (100us).
+   - Reset both triggers to LOW.
+4. Repetition: The system waits for the next cycle without using delay(), allowing for real-time parameter updates.
+
+---
+
+## Features
+
+* Real-time Feedback: The GUI displays "ODEBRANO" confirmation from the hardware.
+* Dual-Channel Support: Independent amplitude control for two simulated PMT hits.
+* Precision Timing: Microsecond-level control over pulse offsets.
+* Safety Lock: "Use Generator" interlock to prevent unintended pulsing.
+
+---
 
 ## Future Extensions
-- FPGA trigger synchronization
-- Configurable rise/fall shaping
-- Multichannel DAC control 
+* External FPGA trigger synchronization.
+* Configurable pulse width via GUI.
+* Exponential pulse shaping implementation.
