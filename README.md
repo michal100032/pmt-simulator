@@ -22,7 +22,7 @@ arduino-cli compile --fqbn esp32:esp32:esp32 .
 
 **Upload:** 
 ```bash 
-arduino-cli upload -p /dev/cu.usbserial-0001 --fqbn esp32:esp32:esp32 .
+arduino-cli upload -p <port> --fqbn esp32:esp32:esp32 .
 ```
 
 ---
@@ -38,7 +38,7 @@ pip install pyserial customtkinter
 
 **Run the controller:**  
 ```bash
-python3 ControlPanel.py
+python3 Serial_Controller.py
 ```
 
 ---
@@ -75,11 +75,13 @@ The firmware uses a non-blocking state machine (`millis()`) to remain responsive
 
 1. Command parsing via `\n` terminator
 2. DAC update via SPI
+   - setting DAC output values for channel 1 and channel 2 (address `0xC8` and `0xC9`)
+   - refreshing the output voltages by toggling LDAC pin tied to the GPIO pin of the DAC (by sending `0x0D0003` and `0x0D0002` commands to the DAC)
 3. Triggering sequence:
    - Trigger 1 (Pin 27) HIGH
    - Wait `DELAY_US`
    - Trigger 2 (Pin 25) HIGH
-   - Hold for `PMT_PULSE_WIDTH_US` (100 µs)
+   - Hold for `PMT_PULSE_WIDTH_US`
    - Reset both triggers LOW
 4. Repetition without `delay()`
 
@@ -93,6 +95,10 @@ The firmware uses a non-blocking state machine (`millis()`) to remain responsive
 - Safety interlock ("Use Generator")
 
 ---
+
+## Performance
+
+Due to GPIO register access time the minimum possible time separation between pulse 1 and pulse 2 was measured to be 1.6 us.
 
 ## Future Extensions
 

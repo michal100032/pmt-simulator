@@ -251,47 +251,44 @@ void loop() {
   static bool is_repeating = false;            // Continue cycles or single shot?
   static bool single_run_complete = true;      // Has single run completed?
   static bool dual_channel = false;            // Use both PMT1 and PMT2?
-
-  unsigned long cycle_start_time = millis();
-  
-  // Trigger PMT pulse if requested from previous cycle
-  if (is_repeating || !single_run_complete) {
-    trigger_pmt_pulse(dual_channel, pmt_delay_us);
-    single_run_complete = true;
-  }
+  static unsigned long last_cycle_time = 0;
 
   // Wait for next command or cycle timeout
-  while (millis() - cycle_start_time < cycle_period_ms) {
-    if (Serial.available() > 0) {
-      String received_line = Serial.readStringUntil('\n');
+  if (Serial.available() > 0) {
+    String received_line = Serial.readStringUntil('\n');
+    received_line.trim();
+    
+    float v1_t, v2_t;
+    unsigned int d_t, p_t;
+    
+    // Attempt to parse command
+    if (parse_command_string(received_line, v1_t, v2_t, d_t, p_t)) {
       
-      float pmt1_voltage = 0.0f;
-      float pmt2_voltage = 0.0f;
-      unsigned int parsed_delay_hits = 0;
-      unsigned int parsed_cycle_period = 0;
+      // Update state machine variables
+      pmt_delay_us = d_t;
+      cycle_period_ms = p_t;
+      dual_channel = (pmt_delay_us > 0);
+      is_repeating = (cycle_period_ms > 0);
+      single_run_complete = false;             // Reset for new cycle
       
-      // Attempt to parse command
-      if (parse_command_string(received_line, pmt1_voltage, pmt2_voltage, 
-                               parsed_delay_hits, parsed_cycle_period)) {
-        
-        // Log parsed values for debugging
-        Serial.printf("Command: PMT1=%.3fV, PMT2=%.3fV, delay=%uus, period=%ums\n",
-                      pmt1_voltage, pmt2_voltage, parsed_delay_hits, parsed_cycle_period);
-        
-        // Update state machine variables
-        pmt_delay_us = parsed_delay_hits;
-        cycle_period_ms = parsed_cycle_period;
-        dual_channel = (pmt_delay_us > 0);
-        is_repeating = (cycle_period_ms > 0);
-        single_run_complete = false;  // Reset for new cycle
-        
-        // Apply new voltage settings to both channels
-        set_channel_voltage(pmt1_voltage, 0, 0);
-        set_channel_voltage(pmt2_voltage, 1, 0);
-        
-        break;  // Exit wait loop to start new cycle
-      }
+      // Apply new voltage settings to both channels
+      set_channel_voltage(v1_t, 0, 0);
+      set_channel_voltage(v2_t, 1, 0);
+      
+      // Log parsed values for debugging
+      Serial.printf("ODEBRANO: V1=%.2f, V2=%.2f, D=%u, P=%u\n", v1_t, v2_t, pmt_delay_us, cycle_period_ms);
+      
+      // Exit wait loop to start new cycle
+    }
+  }
+
+  // Trigger PMT pulse if requested from previous cycle
+  if (is_repeating || !single_run_complete) {
+    if (cycle_period_ms == 0 || (millis() - last_cycle_time >= cycle_period_ms)) {
+      trigger_pmt_pulse(dual_channel, pmt_delay_us);
+      last_cycle_time = millis();
+      single_run_complete = true;
+      if (cycle_period_ms == 0) is_repeating = false;
     }
   }
 }
-
